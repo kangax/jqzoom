@@ -1,5 +1,5 @@
 /*!
- * jQzoom Evolution Library v2.2  - Javascript Image magnifier
+ * jQzoom Evolution Library v2.3  - Javascript Image magnifier
  * http://www.mind-projects.it
  *
  * Copyright 2011, Engineer Marco Renzi
@@ -16,20 +16,17 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * Date: 11 April 2011 22:16:00
+ * Date: 03 May 2011 22:16:00
  */
 (function ($) {
     //GLOBAL VARIABLES
-    var isIE6 = ($.browser.msie && $.browser.version < 7);
+    var isIE6 = false; // ($.browser.msie && $.browser.version < 7);
     var body = $(document.body);
     var window = $(window);
     var jqzoompluging_disabled = false; //disabilita globalmente il plugin
     $.fn.jqzoom = function (options) {
         return this.each(function () {
-            var node = this.nodeName.toLowerCase();
-            if (node == 'a') {
-                new jqzoom(this, options);
-            }
+            new jqzoom(this, options);
         });
     };
     jqzoom = function (el, options) {
@@ -79,6 +76,10 @@
                 if ($(".zoomPad", el).length == 0) {
                     el.zoomPad = $('<div/>').addClass('zoomPad');
                     img.wrap(el.zoomPad);
+                }
+                if(settings.zoomType == 'innerzoom'){
+                    settings.zoomWidth  = smallimage.w;
+                    settings.zoomHeight  =   smallimage.h;
                 }
                 //creating ZoomPup
                 if ($(".zoomPup", el).length == 0) {
@@ -130,8 +131,7 @@
                     smallimage.fetchdata();
                     if (el.largeimageloaded) {
                         obj.activate(event);
-                    }
-                    else {
+                    } else {
                         obj.load();
                     }
                 });
@@ -139,6 +139,7 @@
                     obj.deactivate();
                 });
                 $(".zoomPad", el).bind('mousemove', function (e) {
+
                     //prevent fast mouse mevements not to fire the mouseout event
                     if (e.pageX > smallimage.pos.r || e.pageX < smallimage.pos.l || e.pageY < smallimage.pos.t || e.pageY > smallimage.pos.b) {
                         lens.setcenter();
@@ -177,6 +178,9 @@
                         i++;
                     }
                     $(this).click(function (e) {
+                        if($(this).hasClass('zoomThumbActive')){
+                          return false;
+                        }
                         thumblist.each(function () {
                             $(this).removeClass('zoomThumbActive');
                         });
@@ -188,7 +192,7 @@
             },
             load: function () {
                 if (el.largeimageloaded == false && el.largeimageloading == false) {
-                    var url = $(el).attr('href');
+                    var url = $(el).attr('data-large-url');
                     el.largeimageloading = true;
                     largeimage.loadimage(url);
                 }
@@ -209,8 +213,7 @@
                     $(el).attr('title', el.title);
                     if (settings.alwaysOn) {
                         lens.setcenter();
-                    }
-                    else {
+                    } else {
                         stage.hide();
                         lens.hide();
                     }
@@ -227,14 +230,13 @@
                     var smallimage = options.smallimage;
                     var largeimage = options.largeimage;
                     $(link).addClass('zoomThumbActive');
-                    $(el).attr('href', largeimage);
+                    $(el).attr('data-large-url', largeimage);
                     img.attr('src', smallimage);
                     lens.hide();
                     stage.hide();
                     obj.load();
-                }
-                else {
-                    alert('ERROR :: Missing parameter for largeimage or smallimage.');
+                } else {
+                    //alert('ERROR :: Missing parameter for largeimage or smallimage.');
                     throw 'ERROR :: Missing parameter for largeimage or smallimage.';
                 }
                 return false;
@@ -268,8 +270,7 @@
                         x = bordertop.substr(i, 1);
                         if (isNaN(x) == false) {
                             btop = btop + '' + bordertop.substr(i, 1);
-                        }
-                        else {
+                        } else {
                             break;
                         }
                     }
@@ -278,8 +279,7 @@
                     for (i = 0; i < 3; i++) {
                         if (!isNaN(borderleft.substr(i, 1))) {
                             bleft = bleft + borderleft.substr(i, 1)
-                        }
-                        else {
+                        } else {
                             break;
                         }
                     }
@@ -300,9 +300,10 @@
                 $obj.pos.b = $obj.h + $obj.pos.t;
                 $obj.rightlimit = image.offset().left + $obj.ow;
                 $obj.bottomlimit = image.offset().top + $obj.oh;
+
             };
             this.node.onerror = function () {
-                alert('Problems while loading image.');
+                //alert('Problems while loading image.');
                 throw 'Problems while loading image.';
             };
             this.node.onload = function () {
@@ -348,18 +349,18 @@
         function Lens() {
             var $obj = this;
             this.node = $('<div/>').addClass('zoomPup');
+            //this.nodeimgwrapper = $("<div/>").addClass('zoomPupImgWrapper');
             this.append = function () {
                 $('.zoomPad', el).append($(this.node).hide());
                 if (settings.zoomType == 'reverse') {
                     this.image = new Image();
                     this.image.src = smallimage.node.src; // fires off async
                     $(this.node).empty().append(this.image);
-                    //$( this.node ).css({'opacity' : 1});
                 }
             };
             this.setdimensions = function () {
-                this.node.w = (parseInt((settings.zoomWidth) / el.scale.x) > smallimage.w) ? smallimage.w : parseInt((settings.zoomWidth) / el.scale.x);
-                this.node.h = (parseInt((settings.zoomHeight) / el.scale.y) > smallimage.h) ? smallimage.h : parseInt((settings.zoomHeight) / el.scale.y);
+                this.node.w = (parseInt((settings.zoomWidth) / el.scale.x) > smallimage.w ) ? smallimage.w : (parseInt(settings.zoomWidth / el.scale.x));
+                this.node.h = (parseInt((settings.zoomHeight) / el.scale.y) > smallimage.h ) ? smallimage.h : (parseInt(settings.zoomHeight / el.scale.y));
                 this.node.top = (smallimage.oh - this.node.h - 2) / 2;
                 this.node.left = (smallimage.ow - this.node.w - 2) / 2;
                 //centering lens
@@ -372,16 +373,22 @@
                     display: 'none',
                     borderWidth: 1 + 'px'
                 });
+
+
+
                 if (settings.zoomType == 'reverse') {
                     this.image.src = smallimage.node.src;
                     $(this.node).css({
                         'opacity': 1
                     });
+
                     $(this.image).css({
                         position: 'absolute',
+                        display: 'block',
                         left: -(this.node.left + 1 - smallimage.bleft) + 'px',
                         top: -(this.node.top + 1 - smallimage.btop) + 'px'
                     });
+
                 }
             };
             this.setcenter = function () {
@@ -396,9 +403,11 @@
                 if (settings.zoomType == 'reverse') {
                     $(this.image).css({
                         position: 'absolute',
+                        display: 'block',
                         left: -(this.node.left + 1 - smallimage.bleft) + 'px',
                         top: -(this.node.top + 1 - smallimage.btop) + 'px'
                     });
+
                 }
                 //centering large image
                 largeimage.setposition();
@@ -410,34 +419,35 @@
                 var lenstop = 0;
 
                 function overleft(lens) {
-                    return el.mousepos.x - (lens.w) / 2 < smallimage.pos.l; //el.mousepos.x - (lens.w) / 2  - smallimage.bleft <
+                    return el.mousepos.x - (lens.w) / 2 < smallimage.pos.l;
                 }
 
                 function overright(lens) {
-                    return el.mousepos.x + (lens.w) / 2 > smallimage.pos.r; //+ smallimage.bleft
+                    return el.mousepos.x + (lens.w) / 2 > smallimage.pos.r;
+
                 }
 
                 function overtop(lens) {
-                    return el.mousepos.y - (lens.h) / 2 < smallimage.pos.t; // + smallimage.btop;
+                    return el.mousepos.y - (lens.h) / 2 < smallimage.pos.t;
                 }
 
                 function overbottom(lens) {
-                    return el.mousepos.y + (lens.h) / 2 > smallimage.pos.b; // + smallimage.btop;
+                    return el.mousepos.y + (lens.h) / 2 > smallimage.pos.b;
                 }
+
                 lensleft = el.mousepos.x + smallimage.bleft - smallimage.pos.l - (this.node.w + 2) / 2;
                 lenstop = el.mousepos.y + smallimage.btop - smallimage.pos.t - (this.node.h + 2) / 2;
                 if (overleft(this.node)) {
                     lensleft = smallimage.bleft - 1;
-                }
-                else if (overright(this.node)) {
+                } else if (overright(this.node)) {
                     lensleft = smallimage.w + smallimage.bleft - this.node.w - 1;
                 }
                 if (overtop(this.node)) {
                     lenstop = smallimage.btop - 1;
-                }
-                else if (overbottom(this.node)) {
+                } else if (overbottom(this.node)) {
                     lenstop = smallimage.h + smallimage.btop - this.node.h - 1;
                 }
+
                 this.node.left = lensleft;
                 this.node.top = lenstop;
                 this.node.css({
@@ -445,12 +455,18 @@
                     'top': lenstop + 'px'
                 });
                 if (settings.zoomType == 'reverse') {
+                    // if ($.browser.msie && $.browser.version > 7) {
+                    //     $(this.node).empty().append(this.image);
+                    // }
+
                     $(this.image).css({
                         position: 'absolute',
+                        display: 'block',
                         left: -(this.node.left + 1 - smallimage.bleft) + 'px',
                         top: -(this.node.top + 1 - smallimage.btop) + 'px'
                     });
                 }
+
                 largeimage.setposition();
             };
             this.hide = function () {
@@ -460,9 +476,11 @@
                 this.node.hide();
             };
             this.show = function () {
+
                 if (settings.zoomType != 'innerzoom' && (settings.lens || settings.zoomType == 'drag')) {
                     this.node.show();
                 }
+
                 if (settings.zoomType == 'reverse') {
                     img.css({
                         'opacity': settings.imageOpacity
@@ -507,7 +525,13 @@
                         break;
                     default:
                         this.node.leftpos = (smallimage.rightlimit + Math.abs(settings.xOffset) + settings.zoomWidth < screen.width) ? (smallimage.ow + Math.abs(settings.xOffset)) : (0 - settings.zoomWidth - Math.abs(settings.xOffset));
-                        this.node.toppos = Math.abs(settings.yOffset);
+
+                        // PATCH PREV
+                        // this.node.toppos = Math.abs(settings.yOffset);
+                        // PATCH NEXT
+                        this.node.toppos = settings.yOffset;
+                        // PATCH END
+
                         break;
                     }
                 }
@@ -530,32 +554,24 @@
                     });
                     var thickness = (smallimage.bleft == 0) ? 1 : smallimage.bleft;
                     $('.zoomWrapper', this.node).css({
-                        width: smallimage.w + 'px',
                         borderWidth: thickness + 'px'
                     });
-                    $('.zoomWrapperImage', this.node).css({
-                        width: '100%',
-                        height: smallimage.h + 'px'
-                    });
-                    $('.zoomWrapperTitle', this.node).css({
+                }
+
+                  $('.zoomWrapper', this.node).css({
+                      width: Math.round(settings.zoomWidth) + 'px' ,
+                      borderWidth: thickness + 'px'
+                  });
+                  $('.zoomWrapperImage', this.node).css({
+                      width: '100%',
+                      height: Math.round(settings.zoomHeight) + 'px'
+                  });
+                  //zoom title
+                 $('.zoomWrapperTitle', this.node).css({
                         width: '100%',
                         position: 'absolute'
-                    });
-                }
-                else {
-                    $('.zoomWrapper', this.node).css({
-                        width: Math.round(settings.zoomWidth) + 'px'
-                    });
-                    $('.zoomWrapperImage', this.node).css({
-                        width: '100%',
-                        height: Math.round(settings.zoomHeight) + 'px'
-                    });
-                    $('.zoomWrapperTitle', this.node).css({
-                        width: '100%',
-                        position: 'absolute'
-                    });
-                }
-                //zoom title
+                  });
+
                 $('.zoomWrapperTitle', this.node).hide();
                 if (settings.title && zoomtitle.length > 0) {
                     $('.zoomWrapperTitle', this.node).html(zoomtitle).show();
@@ -612,8 +628,8 @@
             var $obj = this;
             this.node = new Image();
             this.loadimage = function (url) {
-                //showing preload
-                loader.show();
+                // showing preload
+                // loader.show();
                 this.url = url;
                 this.node.style.position = 'absolute';
                 this.node.style.border = '0px';
@@ -643,8 +659,8 @@
                 lens.setdimensions();
             };
             this.node.onerror = function () {
-                alert('Problems while loading the big image.');
-                throw 'Problems while loading the big image.';
+                // alert('Problems while loading the big image.');
+                // window.qbaka && qbaka.reportException('Problems while loading the big image');
             };
             this.node.onload = function () {
                 //fetching data
